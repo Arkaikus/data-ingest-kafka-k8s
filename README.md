@@ -67,6 +67,33 @@ open http://localhost:3000
 
 ## Kubernetes Deployment
 
+A [`justfile`](./justfile) is included with shortcuts for all common operations.
+Install [just](https://github.com/casey/just) and run `just` to list every available recipe.
+
+```bash
+# Deploy the full stack
+just deploy
+
+# Watch pods come up
+just watch
+
+# Tail logs by service
+just logs-producer
+just logs-consumer
+
+# Open a port-forward to the frontend
+just pf-frontend   # → http://localhost:3000
+
+# Scale the consumer to process more partitions in parallel
+just scale-consumer 4
+
+# Tear everything down (DESTRUCTIVE)
+just teardown
+```
+
+<details>
+<summary>Manual kubectl commands (without just)</summary>
+
 ```bash
 # Apply all manifests
 kubectl apply -f k8s/namespace.yaml
@@ -79,6 +106,8 @@ kubectl apply -f k8s/frontend.yaml
 # Watch pods come up
 kubectl get pods -n data-ingest -w
 ```
+
+</details>
 
 > Update the `image:` fields in the deployment manifests to point to your own container registry after building the images.
 
