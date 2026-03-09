@@ -1,0 +1,38 @@
+---
+description: Project file structure and naming conventions
+alwaysApply: true
+---
+
+# File Structure
+
+## Layout
+
+```
+.
+├── frontend/          # React 19 dashboard (Bun)
+│   └── src/
+│       ├── index.ts       # Bun server (SPA + /api proxy)
+│       ├── frontend.tsx   # React entry
+│       ├── App.tsx
+│       ├── index.css      # Global styles
+│       ├── types.ts       # Shared types
+│       └── components/    # React components
+├── producer/          # Hono REST API + Kafka publisher
+│   └── src/
+│       ├── index.ts       # App bootstrap
+│       ├── db.ts          # MongoDB client
+│       ├── kafka.ts       # Kafka producer
+│       └── routes/        # Route modules (e.g. tasks.ts)
+├── consumer/          # Kafka consumer → MongoDB
+│   └── src/index.ts
+├── k8s/               # Kubernetes manifests
+└── docker-compose.yml
+```
+
+## Conventions
+
+- **Routes**: One file per resource under `producer/src/routes/`. Export as `taskRoutes`, `xyzRoutes`.
+- **Components**: PascalCase in `frontend/src/components/`. One component per file; export named.
+- **Types**: Shared types in `frontend/src/types.ts`. Backend types inline or in route/module.
+- **Config**: Environment variables with sensible defaults. No `.env` committed.
+- **K8s**: One manifest per service. Namespace `data-ingest`. Labels `app: <service>`.

@@ -1,0 +1,30 @@
+---
+description: Architecture overview and data flow for data-ingest-kafka-k8s
+alwaysApply: true
+---
+
+# Architecture
+
+## System Overview
+
+Distributed CSV ingestion pipeline: **Frontend** → **Producer** (REST API) → **Kafka** → **Consumer** → **MongoDB**.
+
+- **Frontend**: React 19 + Bun — task dashboard, polls `/api/tasks` every 3s
+- **Producer**: Hono + Bun — REST API, parses CSV, publishes rows to Kafka
+- **Consumer**: Bun — consumes Kafka, inserts records into MongoDB, updates task progress
+- **Kafka**: Bitnami Kafka (KRaft) — topic `data-ingest`
+- **MongoDB**: Task metadata (`tasks`) + ingested rows (`records`)
+
+## Data Flow
+
+1. User uploads CSV → Producer creates task in MongoDB (`status: processing`)
+2. Producer publishes each row as a Kafka message (key: `task_id`, value: JSON with `task_id`, `row_index`, `total_rows`, `data`)
+3. Consumer inserts into `records`, increments `processed_rows` on task
+4. When `processed_rows >= total_rows` → task `status: completed`
+5. Frontend proxies `/api/*` to Producer; SPA served for other routes
+
+## Boundaries
+
+- Producer: HTTP layer + Kafka publish + MongoDB task CRUD. No direct record writes.
+- Consumer: Kafka consume only. Writes to `records` and updates `tasks.processed_rows`.
+- Frontend: UI only. All API calls go through `/api/*` proxy to Producer.

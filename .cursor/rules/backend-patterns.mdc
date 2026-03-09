@@ -1,0 +1,29 @@
+---
+description: Backend patterns for producer and consumer
+globs: producer/**/*.ts, consumer/**/*.ts
+alwaysApply: false
+---
+
+# Backend Patterns
+
+## Producer (Hono)
+
+- Use Hono for routing. Mount routes with `app.route("/api/tasks", taskRoutes)`.
+- Route modules: `new Hono()` instance, JSDoc for each handler (`/** GET /api/tasks — list all tasks */`).
+- Use `getDb()` and `getProducer()` for lazy singletons. Call `closeDb()` / `disconnectProducer()` on SIGTERM/SIGINT.
+- Validate `ObjectId` with try/catch; return 400 for invalid, 404 for not found.
+- CSV: Papa.parse with `header: true`, `skipEmptyLines: true`. Return 422 on parse errors or empty data.
+- Kafka messages: `key: taskId`, `value: JSON.stringify({ task_id, row_index, total_rows, data })`.
+
+## Consumer
+
+- Single `main()` entry. Connect MongoDB and Kafka before `consumer.run()`.
+- `eachMessage`: Parse JSON, insert into `records`, `findOneAndUpdate` with `$inc: { processed_rows: 1 }`.
+- Mark completed when `processed_rows >= total_rows` via separate `updateOne`.
+- Graceful shutdown: `consumer.disconnect()`, `mongoClient.close()`, `process.exit(0)`.
+
+## Shared
+
+- Env vars: `process.env.X || "default"`. Comma-split for `KAFKA_BROKERS`.
+- No framework for consumer — plain Kafka + MongoDB.
+- Use `"type": "module"` in package.json. ESM imports only.

@@ -1,0 +1,48 @@
+---
+description: TypeScript and code styling conventions
+globs: "**/*.{ts,tsx,json,yaml}"
+alwaysApply: false
+---
+
+# Code Style
+
+## TypeScript
+
+- Strict mode enabled. Prefer explicit types for function params and return values.
+- Use `type` for unions/aliases, `interface` for object shapes.
+- Avoid `any`. Use `Record<string, unknown>` for generic JSON objects.
+- Const assertions for literal maps: `const STATUS_COLORS: Record<Task["status"], string> = {...}`
+
+## Formatting
+
+- Double quotes for strings. Semicolons.
+- 2-space indent. Trailing commas in multiline objects/arrays.
+- Max line length: ~100 chars; break long chains or args onto new lines.
+
+## Naming
+
+- `camelCase` for variables, functions, props. `PascalCase` for components, types, classes.
+- `UPPER_SNAKE` for env-like constants (`KAFKA_TOPIC`, `MONGO_URL`).
+- Files: `kebab-case` or `camelCase` matching the primary export (`tasks.ts`, `TaskForm.tsx`).
+
+## Error Handling
+
+```typescript
+// ✅ Validate and return early with status
+try {
+  oid = new ObjectId(c.req.param("id"));
+} catch {
+  return c.json({ error: "Invalid id" }, 400);
+}
+
+// ✅ Surface errors to caller
+catch (err) {
+  setError(String(err));
+}
+```
+
+## K8s / YAML
+
+- Use `---` between resources in multi-doc files.
+- Namespace `data-ingest`. Consistent labels `app: <service>`.
+- ConfigMaps for non-sensitive env. No secrets in manifests (use Secret resources).

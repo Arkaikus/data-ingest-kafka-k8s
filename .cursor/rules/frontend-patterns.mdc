@@ -1,0 +1,29 @@
+---
+description: React and frontend patterns
+globs: frontend/**/*.{ts,tsx,css}
+alwaysApply: false
+---
+
+# Frontend Patterns
+
+## React
+
+- Functional components only. Named exports: `export function TaskForm(...)`.
+- Props: Explicit interfaces (`TaskFormProps`, `TaskListProps`). Use `type` for shared types.
+- State: `useState`, `useCallback` for stable handlers. `useRef` for intervals/DOM refs.
+- Colocate component logic. Extract reusable hooks only when logic is shared.
+- Prefer existing components; prioritize style and reusability when adding features.
+
+## Styling (index.css)
+
+- BEM-like class names: `.task-form`, `.task-form-container`, `.task-item`, `.task-header`.
+- CSS variables in `:root` for theme. Dark-first palette (`#0f172a`, `#1e293b`).
+- Section comments: `/* ── Task form ────────────────────────────────── */`
+- Responsive: `@media (max-width: 520px)` for mobile. `prefers-reduced-motion` for accessibility.
+- Inline styles only for dynamic values (e.g. `width: ${progress}%`, `color: STATUS_COLORS[status]`).
+
+## API
+
+- Fetch `/api/tasks` (proxied to Producer). Poll every 3s for live status.
+- FormData for CSV upload: `POST /api/tasks` with `file` and optional `name`.
+- Handle errors: `res.ok` check, `body?.error` from JSON. Surface in UI.
