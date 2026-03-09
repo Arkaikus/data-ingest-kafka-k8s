@@ -1,0 +1,5 @@
+# Expose BUN_PUBLIC_* environment variables to the client-side bundle.
+# Only variables prefixed with BUN_PUBLIC_ are inlined into browser code —
+# never put secrets in BUN_PUBLIC_* variables.
+[serve.static]
+env = "BUN_PUBLIC_*"

@@ -1,0 +1,103 @@
+services:
+  # ── Kafka (KRaft mode — no Zookeeper required) ─────────────────────────────
+  kafka:
+    image: bitnami/kafka:3.7
+    container_name: kafka
+    environment:
+      # KRaft settings
+      KAFKA_CFG_NODE_ID: "1"
+      KAFKA_CFG_PROCESS_ROLES: controller,broker
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      # Listeners
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # Auto-create topics
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      # Cluster ID (fixed so restarts reuse the same data)
+      KAFKA_KRAFT_CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qg"
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka_data:/bitnami/kafka
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  # ── MongoDB ────────────────────────────────────────────────────────────────
+  mongodb:
+    image: mongo:7
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── Producer ──────────────────────────────────────────────────────────────
+  producer:
+    build:
+      context: ./producer
+    container_name: producer
+    environment:
+      PORT: "3001"
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_TOPIC: data-ingest
+      MONGO_URL: mongodb://mongodb:27017
+      DB_NAME: data_ingest
+    ports:
+      - "3001:3001"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Consumer ──────────────────────────────────────────────────────────────
+  consumer:
+    build:
+      context: ./consumer
+    container_name: consumer
+    environment:
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_TOPIC: data-ingest
+      KAFKA_GROUP_ID: data-ingest-consumer
+      MONGO_URL: mongodb://mongodb:27017
+      DB_NAME: data_ingest
+    depends_on:
+      kafka:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Frontend ──────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+    container_name: frontend
+    environment:
+      NODE_ENV: production
+      PRODUCER_URL: http://producer:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - producer
+    restart: unless-stopped
+
+volumes:
+  kafka_data:
+  mongo_data:

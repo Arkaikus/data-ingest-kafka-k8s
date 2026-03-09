@@ -1,0 +1,38 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: consumer-config
+  namespace: data-ingest
+data:
+  KAFKA_BROKERS: "kafka.data-ingest.svc.cluster.local:9092"
+  KAFKA_TOPIC: "data-ingest"
+  KAFKA_GROUP_ID: "data-ingest-consumer"
+  # Set to "true" to replay all messages from the beginning on startup
+  KAFKA_FROM_BEGINNING: "false"
+  MONGO_URL: "mongodb://mongodb.data-ingest.svc.cluster.local:27017"
+  DB_NAME: "data_ingest"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer
+  namespace: data-ingest
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: consumer
+  template:
+    metadata:
+      labels:
+        app: consumer
+    spec:
+      containers:
+        - name: consumer
+          image: data-ingest-consumer:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: consumer-config

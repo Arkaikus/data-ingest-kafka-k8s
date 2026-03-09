@@ -1,0 +1,59 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: producer-config
+  namespace: data-ingest
+data:
+  PORT: "3001"
+  KAFKA_BROKERS: "kafka.data-ingest.svc.cluster.local:9092"
+  KAFKA_TOPIC: "data-ingest"
+  MONGO_URL: "mongodb://mongodb.data-ingest.svc.cluster.local:27017"
+  DB_NAME: "data_ingest"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: producer
+  namespace: data-ingest
+  labels:
+    app: producer
+spec:
+  selector:
+    app: producer
+  ports:
+    - port: 3001
+      targetPort: 3001
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: producer
+  namespace: data-ingest
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: producer
+  template:
+    metadata:
+      labels:
+        app: producer
+    spec:
+      containers:
+        - name: producer
+          image: data-ingest-producer:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: producer-config
+          ports:
+            - containerPort: 3001
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 5
+            periodSeconds: 10
