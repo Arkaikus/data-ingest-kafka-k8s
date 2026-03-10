@@ -7,27 +7,86 @@
  */
 
 const FIRST_NAMES = [
-  "Alex", "Jordan", "Taylor", "Morgan", "Casey", "Riley", "Avery", "Quinn",
-  "Sam", "Jamie", "Drew", "Blake", "Cameron", "Skyler", "Reese", "Parker",
-  "Emery", "Finley", "Hayden", "Sage", "River", "Phoenix", "Rowan", "Dakota",
+  "Alex",
+  "Jordan",
+  "Taylor",
+  "Morgan",
+  "Casey",
+  "Riley",
+  "Avery",
+  "Quinn",
+  "Sam",
+  "Jamie",
+  "Drew",
+  "Blake",
+  "Cameron",
+  "Skyler",
+  "Reese",
+  "Parker",
+  "Emery",
+  "Finley",
+  "Hayden",
+  "Sage",
+  "River",
+  "Phoenix",
+  "Rowan",
+  "Dakota",
 ];
 
 const LAST_NAMES = [
-  "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis",
-  "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson",
-  "Thomas", "Taylor", "Moore", "Jackson", "Martin", "Lee", "Thompson", "White",
+  "Smith",
+  "Johnson",
+  "Williams",
+  "Brown",
+  "Jones",
+  "Garcia",
+  "Miller",
+  "Davis",
+  "Rodriguez",
+  "Martinez",
+  "Hernandez",
+  "Lopez",
+  "Gonzalez",
+  "Wilson",
+  "Anderson",
+  "Thomas",
+  "Taylor",
+  "Moore",
+  "Jackson",
+  "Martin",
+  "Lee",
+  "Thompson",
+  "White",
 ];
 
 const CITIES = [
-  "New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia",
-  "San Antonio", "San Diego", "Dallas", "San Jose", "Austin", "Jacksonville",
-  "London", "Paris", "Berlin", "Tokyo", "Sydney", "Toronto", "Amsterdam",
+  "New York",
+  "Los Angeles",
+  "Chicago",
+  "Houston",
+  "Phoenix",
+  "Philadelphia",
+  "San Antonio",
+  "San Diego",
+  "Dallas",
+  "San Jose",
+  "Austin",
+  "Jacksonville",
+  "London",
+  "Paris",
+  "Berlin",
+  "Tokyo",
+  "Sydney",
+  "Toronto",
+  "Amsterdam",
 ];
 
 const COUNTRIES = ["US", "US", "US", "UK", "FR", "DE", "JP", "AU", "CA", "NL"];
 
 function pick<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)]!;
+  const el = arr[Math.floor(Math.random() * arr.length)];
+  if (el === undefined) throw new Error("Cannot pick from empty array");
+  return el;
 }
 
 function randomInt(min: number, max: number): number {
@@ -70,7 +129,9 @@ function generateRow(id: number): Record<string, string> {
 }
 
 function toCsv(rows: Record<string, string>[]): string {
-  const headers = Object.keys(rows[0]!);
+  const first = rows[0];
+  if (!first) throw new Error("Cannot convert empty rows to CSV");
+  const headers = Object.keys(first);
   const lines = [
     headers.map(escapeCsv).join(","),
     ...rows.map((r) => headers.map((h) => escapeCsv(r[h] ?? "")).join(",")),
@@ -78,7 +139,7 @@ function toCsv(rows: Record<string, string>[]): string {
   return lines.join("\n");
 }
 
-const rows = parseInt(process.argv[2] ?? "100", 10);
+const rows = Number.parseInt(process.argv[2] ?? "100", 10);
 const output = process.argv[3] ?? "mock-users.csv";
 
 const data = Array.from({ length: rows }, (_, i) => generateRow(i + 1));
