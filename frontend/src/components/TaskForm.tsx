@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from "react";
+import { type FormEvent, useRef, useState } from "react";
 
 interface TaskFormProps {
   onSubmit: (formData: FormData) => Promise<void>;
@@ -50,9 +50,7 @@ export function TaskForm({ onSubmit, loading }: TaskFormProps) {
               name="file"
               accept=".csv"
               className="file-input"
-              onChange={(e) =>
-                setFileName(e.target.files?.[0]?.name ?? "")
-              }
+              onChange={(e) => setFileName(e.target.files?.[0]?.name ?? "")}
             />
             <span className="file-button">📂 Choose CSV</span>
             <span className="file-name">{fileName || "No file chosen"}</span>

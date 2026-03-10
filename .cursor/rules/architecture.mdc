@@ -19,9 +19,10 @@ Distributed CSV ingestion pipeline: **Frontend** → **Producer** (REST API) →
 
 1. User uploads CSV → Producer creates task in MongoDB (`status: processing`)
 2. Producer publishes each row as a Kafka message (key: `task_id`, value: JSON with `task_id`, `row_index`, `total_rows`, `data`)
-3. Consumer inserts into `records`, increments `processed_rows` on task
-4. When `processed_rows >= total_rows` → task `status: completed`
-5. Frontend proxies `/api/*` to Producer; SPA served for other routes
+3. On task delete, Producer publishes `{ type: "task-deleted", task_id }`; Consumer deletes from `records`
+4. Consumer inserts into `records`, increments `processed_rows` on task
+5. When `processed_rows >= total_rows` → task `status: completed`
+6. Frontend proxies `/api/*` to Producer; SPA served for other routes
 
 ## Boundaries
 

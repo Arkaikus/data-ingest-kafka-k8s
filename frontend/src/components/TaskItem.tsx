@@ -6,10 +6,10 @@ interface TaskItemProps {
 }
 
 const STATUS_COLORS: Record<Task["status"], string> = {
-  pending: "#f59e0b",
-  processing: "#3b82f6",
-  completed: "#22c55e",
-  failed: "#ef4444",
+  pending: "var(--color-status-pending)",
+  processing: "var(--color-status-processing)",
+  completed: "var(--color-status-completed)",
+  failed: "var(--color-status-failed)",
 };
 
 const STATUS_LABELS: Record<Task["status"], string> = {
@@ -21,9 +21,7 @@ const STATUS_LABELS: Record<Task["status"], string> = {
 
 export function TaskItem({ task, onDelete }: TaskItemProps) {
   const progress =
-    task.total_rows > 0
-      ? Math.round((task.processed_rows / task.total_rows) * 100)
-      : 0;
+    task.total_rows > 0 ? Math.round((task.processed_rows / task.total_rows) * 100) : 0;
 
   return (
     <div className="task-item">
@@ -33,13 +31,11 @@ export function TaskItem({ task, onDelete }: TaskItemProps) {
           <span className="task-filename">{task.filename}</span>
         </div>
         <div className="task-actions">
-          <span
-            className="task-status"
-            style={{ color: STATUS_COLORS[task.status] }}
-          >
+          <span className="task-status" style={{ color: STATUS_COLORS[task.status] }}>
             {STATUS_LABELS[task.status]}
           </span>
           <button
+            type="button"
             className="delete-button"
             onClick={() => onDelete(task._id)}
             title="Delete task"

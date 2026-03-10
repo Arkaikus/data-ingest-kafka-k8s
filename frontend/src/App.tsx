@@ -58,11 +58,7 @@ export function App() {
 
       <main className="app-main">
         <TaskForm onSubmit={handleCreate} loading={loading} />
-        {fetchError && (
-          <div className="fetch-error">
-            ⚠️ Could not reach the API: {fetchError}
-          </div>
-        )}
+        {fetchError && <div className="fetch-error">⚠️ Could not reach the API: {fetchError}</div>}
         <section className="tasks-section">
           <h2>Import Tasks</h2>
           <TaskList tasks={tasks} onDelete={handleDelete} />

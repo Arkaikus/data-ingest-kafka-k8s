@@ -1,21 +1,24 @@
 ---
-# Kafka ConfigMap (KRaft mode — no Zookeeper)
+# Kafka ConfigMap (KRaft mode — Apache Kafka image)
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: kafka-config
   namespace: data-ingest
 data:
-  KAFKA_CFG_NODE_ID: "1"
-  KAFKA_CFG_PROCESS_ROLES: controller,broker
-  KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "1@kafka-0.kafka-headless.data-ingest.svc.cluster.local:9093"
-  KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-  KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka-0.kafka-headless.data-ingest.svc.cluster.local:9092
-  KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-  KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
-  KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-  KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
-  KAFKA_KRAFT_CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qg"
+  KAFKA_NODE_ID: "1"
+  KAFKA_PROCESS_ROLES: broker,controller
+  KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka-0.kafka-headless.data-ingest.svc.cluster.local:29093"
+  KAFKA_LISTENERS: "CONTROLLER://:29093,PLAINTEXT://:9092"
+  KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-0.kafka-headless.data-ingest.svc.cluster.local:9092"
+  KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+  KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+  KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+  CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qg"
+  KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+  KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+  KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+  KAFKA_LOG_DIRS: "/var/lib/kafka/data"
 
 ---
 # Headless service for stable DNS entries used by KRaft
@@ -35,8 +38,8 @@ spec:
       port: 9092
       targetPort: 9092
     - name: controller
-      port: 9093
-      targetPort: 9093
+      port: 29093
+      targetPort: 29093
 
 ---
 # ClusterIP service for client access
@@ -75,26 +78,21 @@ spec:
     spec:
       containers:
         - name: kafka
-          image: bitnami/kafka:3.7
+          image: apache/kafka:latest
           envFrom:
             - configMapRef:
                 name: kafka-config
           ports:
             - containerPort: 9092
-            - containerPort: 9093
+            - containerPort: 29093
           volumeMounts:
             - name: kafka-data
-              mountPath: /bitnami/kafka
+              mountPath: /var/lib/kafka/data
           readinessProbe:
-            exec:
-              command:
-                - kafka-topics.sh
-                - --bootstrap-server
-                - localhost:9092
-                - --list
-            initialDelaySeconds: 20
+            tcpSocket:
+              port: 9092
+            initialDelaySeconds: 30
             periodSeconds: 10
-            failureThreshold: 6
   volumeClaimTemplates:
     - metadata:
         name: kafka-data

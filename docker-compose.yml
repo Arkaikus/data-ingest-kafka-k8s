@@ -1,7 +1,7 @@
 services:
   # ── Kafka (KRaft mode — no Zookeeper required) ─────────────────────────────
   kafka:
-    image: bitnami/kafka:3.7
+    image: apache/kafka:latest
     container_name: kafka
     environment:
       # KRaft settings
@@ -21,7 +21,7 @@ services:
     ports:
       - "9092:9092"
     volumes:
-      - kafka_data:/bitnami/kafka
+      - kafka_data:/apache/kafka
     healthcheck:
       test:
         [

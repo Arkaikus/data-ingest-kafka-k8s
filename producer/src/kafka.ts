@@ -1,8 +1,8 @@
 import { Kafka, type Producer } from "kafkajs";
 
-const KAFKA_BROKERS = (
-  process.env.KAFKA_BROKERS || "localhost:9092"
-).split(",");
+const KAFKA_BROKERS = (process.env.KAFKA_BROKERS || "localhost:9092")
+  .split(",")
+  .map((s) => s.trim());
 
 export const KAFKA_TOPIC = process.env.KAFKA_TOPIC || "data-ingest";
 
@@ -21,7 +21,7 @@ export async function getProducer(): Promise<Producer> {
   return producer;
 }
 
-export async function disconnectProducer() {
+export async function disconnectProducer(): Promise<void> {
   if (producer) {
     await producer.disconnect();
     producer = null;

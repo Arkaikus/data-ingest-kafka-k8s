@@ -2,18 +2,14 @@ import { Hono } from "hono";
 import { ObjectId } from "mongodb";
 import Papa from "papaparse";
 import { getDb } from "../db";
-import { getProducer, KAFKA_TOPIC } from "../kafka";
+import { KAFKA_TOPIC, getProducer } from "../kafka";
 
 const tasks = new Hono();
 
 /** GET /api/tasks — list all tasks, newest first */
 tasks.get("/", async (c) => {
   const db = await getDb();
-  const docs = await db
-    .collection("tasks")
-    .find({})
-    .sort({ created_at: -1 })
-    .toArray();
+  const docs = await db.collection("tasks").find({}).sort({ created_at: -1 }).toArray();
   return c.json(docs.map((t) => ({ ...t, _id: String(t._id) })));
 });
 
@@ -46,10 +42,7 @@ tasks.post("/", async (c) => {
   }
 
   const rawName = formData.get("name");
-  const name =
-    typeof rawName === "string" && rawName.trim()
-      ? rawName.trim()
-      : file.name;
+  const name = typeof rawName === "string" && rawName.trim() ? rawName.trim() : file.name;
 
   const csvText = await file.text();
   const { data, errors } = Papa.parse<Record<string, unknown>>(csvText, {
@@ -96,15 +89,17 @@ tasks.post("/", async (c) => {
   });
 
   // Mark as processing once messages are enqueued
-  await db.collection("tasks").updateOne(
-    { _id: result.insertedId },
-    { $set: { status: "processing", updated_at: new Date() } }
-  );
+  await db
+    .collection("tasks")
+    .updateOne(
+      { _id: result.insertedId },
+      { $set: { status: "processing", updated_at: new Date() } },
+    );
 
   return c.json({ ...taskDoc, _id: taskId, status: "processing" }, 201);
 });
 
-/** DELETE /api/tasks/:id — remove a task and its records */
+/** DELETE /api/tasks/:id — remove a task; Consumer handles record cleanup via Kafka */
 tasks.delete("/:id", async (c) => {
   const db = await getDb();
   let oid: ObjectId;
@@ -115,8 +110,19 @@ tasks.delete("/:id", async (c) => {
   }
   const result = await db.collection("tasks").deleteOne({ _id: oid });
   if (result.deletedCount === 0) return c.json({ error: "Not found" }, 404);
-  // Clean up all records associated with the deleted task
-  await db.collection("records").deleteMany({ task_id: String(oid) });
+
+  const taskId = String(oid);
+  const producer = await getProducer();
+  await producer.send({
+    topic: KAFKA_TOPIC,
+    messages: [
+      {
+        key: taskId,
+        value: JSON.stringify({ type: "task-deleted", task_id: taskId }),
+      },
+    ],
+  });
+
   return c.json({ success: true });
 });
 

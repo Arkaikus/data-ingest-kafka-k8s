@@ -1,0 +1,26 @@
+---
+description: Linter and formatter usage for code quality
+globs: "**/*.{ts,tsx,js,jsx,json,css}"
+alwaysApply: true
+---
+
+# Lint & Format
+
+## Tooling
+
+This project uses **Biome** for linting and formatting. Config: [`biome.json`](/biome.json) at project root.
+
+## Commands
+
+- `bun run lint` — Check lint and format (CI / pre-commit)
+- `bun run lint:fix` — Auto-fix lint issues, format, organize imports
+- `bun run format` — Format all files
+- `just lint` — Same as `bun run lint`
+- `just format` — Same as `bun run format`
+
+## Agent Workflow
+
+1. **Before committing**: Run `bun run lint:fix` to ensure code passes checks.
+2. **When editing**: Match Biome rules — double quotes, semicolons, 2-space indent, ~100 char line width, trailing commas.
+3. **New code**: Avoid non-null assertions (`!`); use guards or optional chaining instead.
+4. **Buttons**: Use explicit `type="button"` for non-submit buttons.

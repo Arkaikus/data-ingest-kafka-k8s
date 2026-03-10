@@ -14,7 +14,7 @@ AI agents working on this codebase should follow these directions.
 
 1. **Respect boundaries**: Producer does not write to `records`; Consumer does not expose HTTP. Frontend proxies `/api/*` to Producer.
 2. **Reuse components**: Prefer existing React components and styles. Match `index.css` patterns (BEM-like, dark theme).
-3. **Follow `.cursor/rules/`**: Architecture, file structure, backend/frontend patterns, and code style are defined there.
+3. **Follow `.cursor/rules/`**: Architecture, file structure, backend/frontend patterns, code style, and lint/format are defined there.
 
 ## Key Paths
 
@@ -32,10 +32,12 @@ AI agents working on this codebase should follow these directions.
 - **Local dev**: `docker compose up kafka mongodb -d` then `bun run dev` in `producer/`, `consumer/`, `frontend/`
 - **K8s**: `just deploy`, `just watch`, `just logs-producer`, `just pf-frontend`
 - **Build**: `just build-all`
+- **Lint/format**: `just lint`, `just format` (Biome)
+- **K3s image load**: After `just build-all`, run `just k3s-load` to import images into K3s (requires sudo). For Kind, use `just kind-load`.
 
 ## Conventions
 
 - ESM only. Strict TypeScript.
 - Env vars with defaults (e.g. `process.env.PORT \|\| 3001`).
 - Graceful shutdown: disconnect Kafka/MongoDB on SIGTERM/SIGINT.
-- Kafka message value: `{ task_id, row_index, total_rows, data }` (JSON).
+- Kafka message value: `{ task_id, row_index, total_rows, data }` (row) or `{ type: "task-deleted", task_id }` (delete).

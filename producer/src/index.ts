@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { taskRoutes } from "./routes/tasks";
 import { closeDb } from "./db";
 import { disconnectProducer } from "./kafka";
+import { taskRoutes } from "./routes/tasks";
 
 const PORT = Number(process.env.PORT || 3001);
 

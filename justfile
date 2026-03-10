@@ -8,6 +8,9 @@
 #   just            → list all available recipes
 #   just deploy     → deploy the full stack
 #   just status     → show all resource status
+#
+# K3s: After build-all, run `just k3s-load` (sudo) to import images before deploy.
+# Kind: Use `just kind-load` instead.
 # ──────────────────────────────────────────────────────────────────────────────
 
 # Namespace used by all k8s resources
@@ -21,11 +24,28 @@ default:
     @just --list
 
 # ══════════════════════════════════════════════════════════════════════════════
+# LINT / FORMAT
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Run Biome lint and format check
+lint:
+    bun run lint
+
+# Auto-fix lint issues and format all files
+format:
+    bun run lint:fix
+
+# Generate mock user profile CSV for ingestion testing (usage: just mock 500 data/users.csv)
+mock rows="100" output="mock-users.csv":
+    bun scripts/mock-users.ts {{rows}} {{output}}
+    @echo "Upload via the dashboard or: curl -X POST -F file=@{{output}} -F name='Mock users' http://localhost:3000/api/tasks"
+
+# ══════════════════════════════════════════════════════════════════════════════
 # DEPLOY / TEARDOWN
 # ══════════════════════════════════════════════════════════════════════════════
 
 # Deploy the full stack (applies manifests in dependency order)
-deploy:
+deploy: build-all k3s-load
     kubectl apply -f k8s/namespace.yaml
     kubectl apply -f k8s/kafka.yaml
     kubectl apply -f k8s/mongodb.yaml
@@ -62,6 +82,10 @@ restart:
 # Restart a single deployment (usage: just restart-one producer)
 restart-one name:
     kubectl rollout restart deployment/{{name}} -n {{ns}}
+
+# Delete a pod to force recreation (usage: just delete-pod kafka-0)
+delete-pod name:
+    kubectl delete pod {{name}} -n {{ns}}
 
 # ══════════════════════════════════════════════════════════════════════════════
 # STATUS & HEALTH
@@ -211,19 +235,19 @@ debug:
 
 # List all Kafka topics
 kafka-topics:
-    kubectl exec -n {{ns}} -it kafka-0 -- \
-        kafka-topics.sh --bootstrap-server localhost:9092 --list
+    kubectl exec -n {{ns}} kafka-0 -- \
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
 
 # Describe the data-ingest topic
 kafka-describe topic="data-ingest":
-    kubectl exec -n {{ns}} -it kafka-0 -- \
-        kafka-topics.sh --bootstrap-server localhost:9092 \
+    kubectl exec -n {{ns}} kafka-0 -- \
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 \
         --describe --topic {{topic}}
 
 # Create a topic (usage: just kafka-create-topic my-topic 3 1)
 kafka-create-topic topic partitions="3" replication="1":
-    kubectl exec -n {{ns}} -it kafka-0 -- \
-        kafka-topics.sh --bootstrap-server localhost:9092 \
+    kubectl exec -n {{ns}} kafka-0 -- \
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 \
         --create --topic {{topic}} \
         --partitions {{partitions}} \
         --replication-factor {{replication}} \
@@ -231,14 +255,14 @@ kafka-create-topic topic partitions="3" replication="1":
 
 # Delete a topic (usage: just kafka-delete-topic my-topic)
 kafka-delete-topic topic:
-    kubectl exec -n {{ns}} -it kafka-0 -- \
-        kafka-topics.sh --bootstrap-server localhost:9092 \
+    kubectl exec -n {{ns}} kafka-0 -- \
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 \
         --delete --topic {{topic}}
 
 # Consume messages from the beginning of the data-ingest topic (live tail)
 kafka-consume topic="data-ingest":
     kubectl exec -n {{ns}} -it kafka-0 -- \
-        kafka-console-consumer.sh \
+        /opt/kafka/bin/kafka-console-consumer.sh \
         --bootstrap-server localhost:9092 \
         --topic {{topic}} \
         --from-beginning
@@ -246,22 +270,22 @@ kafka-consume topic="data-ingest":
 # Consume only the latest N messages (usage: just kafka-consume-tail data-ingest 20)
 kafka-consume-tail topic="data-ingest" count="10":
     kubectl exec -n {{ns}} -it kafka-0 -- \
-        kafka-console-consumer.sh \
+        /opt/kafka/bin/kafka-console-consumer.sh \
         --bootstrap-server localhost:9092 \
         --topic {{topic}} \
         --max-messages {{count}}
 
 # Show consumer group offsets / lag
 kafka-lag group="data-ingest-consumer":
-    kubectl exec -n {{ns}} -it kafka-0 -- \
-        kafka-consumer-groups.sh \
+    kubectl exec -n {{ns}} kafka-0 -- \
+        /opt/kafka/bin/kafka-consumer-groups.sh \
         --bootstrap-server localhost:9092 \
         --describe --group {{group}}
 
 # List all consumer groups
 kafka-groups:
-    kubectl exec -n {{ns}} -it kafka-0 -- \
-        kafka-consumer-groups.sh --bootstrap-server localhost:9092 --list
+    kubectl exec -n {{ns}} kafka-0 -- \
+        /opt/kafka/bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --list
 
 # Open an interactive shell in the Kafka pod
 exec-kafka:
@@ -314,6 +338,13 @@ kind-load tag="latest":
     kind load docker-image {{registry}}-frontend:{{tag}}
     kind load docker-image {{registry}}-producer:{{tag}}
     kind load docker-image {{registry}}-consumer:{{tag}}
+
+# Load all images into K3s containerd (requires k3s, run after build-all)
+k3s-load tag="latest":
+    docker save {{registry}}-frontend:{{tag}} | sudo k3s ctr images import -
+    docker save {{registry}}-producer:{{tag}} | sudo k3s ctr images import -
+    docker save {{registry}}-consumer:{{tag}} | sudo k3s ctr images import -
+    @echo "✅ Images loaded into K3s. Run 'just restart' to pick up changes."
 
 # Push all images to the configured registry
 push-all tag="latest":
